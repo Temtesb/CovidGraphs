@@ -1,7 +1,7 @@
 #https://covid19.healthdata.org/projections
 #https://stackoverflow.com/questions/39190511/assigning-value-to-the-list-element-in-r
 #pacman::p_load(pacman, readr, dplyr)# faster option, but we can't use readr
-pacman::p_load(pacman, dplyr, ggplot2, pdftools, data.table, lubridate,gridExtra)
+pacman::p_load(pacman, dplyr, ggplot2, pdftools, data.table, lubridate,gridExtra, grDevices, grid)
 
 
 baseUrl<-"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports"
@@ -105,8 +105,8 @@ length(dateRangeGraph2)
 outputDetails
 
 
-
-write.csv(outputDetails,"outputDetails.csv")
+outputDetailsForReport<-cbind(dateRangeGraph2,outputDetails)
+write.csv(outputDetailsForReport,"outputDetailsForReport.csv")
 outputDetails<-list()
 
 for(i in 5:length(data)) { 
@@ -132,8 +132,12 @@ P4<-ggplot(outputDetails3, aes(x=Last_Update, y=value))+
 	geom_line(aes(color=Combined_Key, linetype=Combined_Key), lwd=1.5)+
 	ggtitle("City Comparison")
 
-grid.arrange(P1,P2, P4, nrow=3)
 
+pdf("COVID.pdf", width=13, height=7.5)
+print(grid.arrange(P1,P2, P4, nrow=3))
+grid.newpage()
+grid.table(outputDetailsForReport)
+dev.off()
 
 
 #--------------Text mining
