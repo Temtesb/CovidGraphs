@@ -139,6 +139,7 @@ grid.newpage()
 grid.table(outputDetailsForReport)
 dev.off()
 
+shell.exec("COVID.pdf")
 
 #--------------Text mining
 #https://data.library.virginia.edu/reading-pdf-files-into-r-for-text-mining/
