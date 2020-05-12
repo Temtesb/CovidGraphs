@@ -20,18 +20,18 @@ combinedKeyLocations<-paste(localCities,"Virginia", "US", sep=", ")
 
 output<-list()
 for(i in 1:length(data)) { 
-	nam <- paste0("localData",i)
-	dat <- data[[i]]
-	localDatFiltered<-dat %>%
-		filter(Combined_Key %in% combinedKeyLocations)%>%
-		select(Last_Update,Confirmed, Deaths, Recovered, Active)
-	localDatSummary<-localDatFiltered%>%
-		summarise(Confirmed=sum(Confirmed),Deaths=sum(Deaths),Recovered=sum(Recovered))
-
-
-	assign(nam, localDatSummary)
-	localDatSummary<-as.numeric(localDatSummary)
-	output[[i]]<-localDatSummary
+  nam <- paste0("localData",i)
+  dat <- data[[i]]
+  localDatFiltered<-dat %>%
+    filter(Combined_Key %in% combinedKeyLocations)%>%
+    select(Last_Update,Confirmed, Deaths, Recovered, Active)
+  localDatSummary<-localDatFiltered%>%
+    summarise(Confirmed=sum(Confirmed),Deaths=sum(Deaths),Recovered=sum(Recovered))
+  
+  
+  assign(nam, localDatSummary)
+  localDatSummary<-as.numeric(localDatSummary)
+  output[[i]]<-localDatSummary
 }
 str(output)
 output<-data.frame(matrix(unlist(output),ncol=3, byrow=TRUE))
@@ -56,46 +56,49 @@ outputPerDay<-data.frame(diff(as.matrix(output[[2]])))
 outputPerDay2 <-data.frame(cbind(dateRangeGraph[1:(length(dateRangeGraph)-1)],outputPerDay))
 colnames(outputPerDay2)<-c("Date", "Change")
 
-P0<-ggplot(outputPerDay2, aes(Date))+
-	geom_col(aes(y=Change), colour="red") +
-	ylab("Change")+
-	ggtitle("Daily Change in Cases")
+n_forMean<-5
+outputPerDay3<-na.omit(data.frame((frollmean(outputPerDay2, n=n_forMean))))
+colnames(outputPerDay3)<-c("Date","Change")
+outputPerDay3<-mutate(outputPerDay3, Date = as.Date(Date, origin = "1970-01-01"))
 
-
+P0<-ggplot(outputPerDay3, aes(Date))+
+  geom_col(aes(y=Change), colour="red") +
+  ylab("Change")+
+  ggtitle("Daily Change in Cases")
 
 P1<-ggplot(output, aes(x=Date, color="black"))+
-	geom_line(aes(y=Confirmed), colour="green")+
-	ylab("Confirmed Cases")+ 
-	scale_fill_discrete(breaks=c("trt1"))+
-	ggtitle("Hampton Roads Area Confirmed Cases")
+  geom_line(aes(y=Confirmed), colour="green")+
+  ylab("Confirmed Cases")+ 
+  scale_fill_discrete(breaks=c("trt1"))+
+  ggtitle("Hampton Roads Area Confirmed Cases")
 
 P2<-ggplot(output, aes(x=Date, color="black"))+
-	geom_line(aes(y=Confirmed), colour="green")+
-	ylab("Confirmed Cases")+ 
-	scale_fill_discrete(breaks=c("trt1"))+
-	ggtitle("Hampton Roads Area Confirmed Cases (Log Scale)")+
-	scale_y_continuous(trans='log10')
+  geom_line(aes(y=Confirmed), colour="green")+
+  ylab("Confirmed Cases")+ 
+  scale_fill_discrete(breaks=c("trt1"))+
+  ggtitle("Hampton Roads Area Confirmed Cases (Log Scale)")+
+  scale_y_continuous(trans='log10')
 
 
 P3<-ggplot(output, aes(Date))+
-	geom_line(aes(y=Deaths), colour="red") +
-	ylab("Deaths")+
-	ggtitle("Deaths")
+  geom_line(aes(y=Deaths), colour="red") +
+  ylab("Deaths")+
+  ggtitle("Deaths")
 
 #--------------Detail graphs
 outputDetails<-list()
 #write.csv(outputDetails,"outputDetails.csv")
 for(i in 5:length(data)) { 
-	nam <- paste0("localData",i)
-	dat <- data[[i]]
-	localDatFiltered<-dat %>%
-		filter(Combined_Key %in% combinedKeyLocations)%>%
-		select(Combined_Key, Confirmed, Deaths, Recovered, Active)
-
-	assign(nam, localDatSummary)
-	localDatFilteredConfirmed <- as.numeric(melt(localDatFiltered, id=1, measure = "Confirmed")[[3]])
-
-	outputDetails[[i]]<-localDatFilteredConfirmed
+  nam <- paste0("localData",i)
+  dat <- data[[i]]
+  localDatFiltered<-dat %>%
+    filter(Combined_Key %in% combinedKeyLocations)%>%
+    select(Combined_Key, Confirmed, Deaths, Recovered, Active)
+  
+  assign(nam, localDatSummary)
+  localDatFilteredConfirmed <- as.numeric(melt(localDatFiltered, id=1, measure = "Confirmed")[[3]])
+  
+  outputDetails[[i]]<-localDatFilteredConfirmed
 }
 str(outputDetails)
 outputDetails<-data.frame(matrix(unlist(outputDetails),ncol=9, byrow=TRUE))
@@ -112,27 +115,27 @@ write.csv(outputDetailsForReport,"outputDetailsForReport.csv")
 outputDetails<-list()
 
 for(i in 5:length(data)) { 
-	nam <- paste0("localData",i)
-	dat <- data[[i]]
-	localDatFiltered<-dat %>%
-		filter(Combined_Key %in% combinedKeyLocations)%>%
-		select(Last_Update, Combined_Key, Confirmed)
-
-	assign(nam, localDatSummary)
-#	localDatFilteredConfirmed <- as.numeric(melt(localDatFiltered, id=1, measure = "Confirmed")[[3]])
-	localDatFilteredConfirmed <- localDatFiltered
-
-
-	outputDetails<-rbind(outputDetails,localDatFilteredConfirmed)
+  nam <- paste0("localData",i)
+  dat <- data[[i]]
+  localDatFiltered<-dat %>%
+    filter(Combined_Key %in% combinedKeyLocations)%>%
+    select(Last_Update, Combined_Key, Confirmed)
+  
+  assign(nam, localDatSummary)
+  #	localDatFilteredConfirmed <- as.numeric(melt(localDatFiltered, id=1, measure = "Confirmed")[[3]])
+  localDatFilteredConfirmed <- localDatFiltered
+  
+  
+  outputDetails<-rbind(outputDetails,localDatFilteredConfirmed)
 }
 outputDetails2<-outputDetails%>%
-	mutate(Last_Update=as.Date(parse_date_time(outputDetails[[1]], c("mdy_HM","ymd_HMS"))))
+  mutate(Last_Update=as.Date(parse_date_time(outputDetails[[1]], c("mdy_HM","ymd_HMS"))))
 
 
 outputDetails3<-melt(outputDetails2, id=1:2, measure="Confirmed")
 P4<-ggplot(outputDetails3, aes(x=Last_Update, y=value))+
-	geom_line(aes(color=Combined_Key, linetype=Combined_Key), lwd=1.5)+
-	ggtitle("City Comparison")
+  geom_line(aes(color=Combined_Key, linetype=Combined_Key), lwd=1.5)+
+  ggtitle("City Comparison")
 
 
 pdf("COVID.pdf", width=8.5, height=10.5)
