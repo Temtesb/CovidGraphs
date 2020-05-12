@@ -52,6 +52,17 @@ plot(Date, Deaths, type="p", main="Local NNSY Area COVID-19 Cases")
 #--------------New plots
 group<-c("Deaths","Confirmed")
 
+outputPerDay<-data.frame(diff(as.matrix(output[[2]])))
+outputPerDay2 <-data.frame(cbind(dateRangeGraph[1:(length(dateRangeGraph)-1)],outputPerDay))
+colnames(outputPerDay2)<-c("Date", "Change")
+
+P0<-ggplot(outputPerDay2, aes(Date))+
+	geom_col(aes(y=Change), colour="red") +
+	ylab("Change")+
+	ggtitle("Daily Change in Cases")
+
+
+
 P1<-ggplot(output, aes(x=Date, color="black"))+
 	geom_line(aes(y=Confirmed), colour="green")+
 	ylab("Confirmed Cases")+ 
@@ -70,15 +81,6 @@ P3<-ggplot(output, aes(Date))+
 	geom_line(aes(y=Deaths), colour="red") +
 	ylab("Deaths")+
 	ggtitle("Deaths")
-
-
-#--------------Old plot on log scale
-plot(Date, Confirmed_Cases, type="p", main="Local NNSY Area COVID-19 Cases", log="y") #for log scale
-
-
-
-
-
 
 #--------------Detail graphs
 outputDetails<-list()
@@ -133,10 +135,11 @@ P4<-ggplot(outputDetails3, aes(x=Last_Update, y=value))+
 	ggtitle("City Comparison")
 
 
-pdf("COVID.pdf", width=13, height=7.5)
-print(grid.arrange(P1,P2, P4, nrow=3))
-grid.newpage()
-grid.table(outputDetailsForReport)
+pdf("COVID.pdf", width=8.5, height=10.5)
+print(grid.arrange(P0,P1,P2, P4, nrow=4))
+#grid.newpage()
+
+#grid.table(outputDetailsForReport)
 dev.off()
 
 shell.exec("COVID.pdf")
