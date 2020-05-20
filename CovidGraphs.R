@@ -46,7 +46,7 @@ Date<-dateRangeGraph
 
 #--------------Old plots
 plot(Date, Confirmed_Cases, type="p", main="Local NNSY Area COVID-19 Cases")
-par(new=TRUE)
+#par(new=TRUE)
 plot(Date, Deaths, type="p", main="Local NNSY Area COVID-19 Cases")
 
 #--------------New plots
@@ -56,7 +56,7 @@ outputPerDay<-data.frame(diff(as.matrix(output[[2]])))
 outputPerDay2 <-data.frame(cbind(dateRangeGraph[1:(length(dateRangeGraph)-1)],outputPerDay))
 colnames(outputPerDay2)<-c("Date", "Change")
 
-n_forMean<-5
+n_forMean<-7
 outputPerDay3<-na.omit(data.frame((frollmean(outputPerDay2, n=n_forMean))))
 colnames(outputPerDay3)<-c("Date","Change")
 outputPerDay3<-mutate(outputPerDay3, Date = as.Date(Date, origin = "1970-01-01"))
@@ -64,7 +64,7 @@ outputPerDay3<-mutate(outputPerDay3, Date = as.Date(Date, origin = "1970-01-01")
 P0<-ggplot(outputPerDay3, aes(Date))+
   geom_col(aes(y=Change), colour="red") +
   ylab("Change")+
-  ggtitle("Daily Change in Cases")
+  ggtitle("Daily Change in Cases (7 Day Avg)")
 
 P1<-ggplot(output, aes(x=Date, color="black"))+
   geom_line(aes(y=Confirmed), colour="green")+
