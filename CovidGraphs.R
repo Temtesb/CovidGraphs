@@ -1,6 +1,6 @@
 #https://covid19.healthdata.org/projections
 #https://stackoverflow.com/questions/39190511/assigning-value-to-the-list-element-in-r
-#pacman::p_load(pacman, readr, dplyr)# faster option, but we can't use readr
+
 pacman::p_load(pacman, dplyr, ggplot2, pdftools, data.table, lubridate,gridExtra, grDevices, grid)
 
 
@@ -15,8 +15,11 @@ fileList<-paste0(baseUrl,"/",dateRange, ".csv")
 
 #data<-lapply(fileList,read_csv) # faster option, but we can't use readr
 data<-lapply(fileList,read.csv)
-localCities<-c("Chesapeake","Hampton","James City","Newport News","Norfolk","Portsmouth","Suffolk","Virginia Beach","Williamsburg")
-combinedKeyLocations<-paste(localCities,"Virginia", "US", sep=", ")
+localCities<-c("Chesapeake","Hampton","James City","Newport News","Norfolk","Portsmouth","Suffolk","Virginia Beach","Williamsburg","Currituck")
+localStates<-c("Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","Virginia","North Carolina")
+combinedKeyLocations<-paste(localCities,localStates, "US", sep=", ")
+
+localPopulation<-c(235429,136454, 73147, 182385, 246393, 96201, 88161, 452745, 15052, 27072)
 
 output<-list()
 for(i in 1:length(data)) { 
@@ -56,15 +59,72 @@ outputPerDay<-data.frame(diff(as.matrix(output[[2]])))
 outputPerDay2 <-data.frame(cbind(dateRangeGraph[1:(length(dateRangeGraph)-1)],outputPerDay))
 colnames(outputPerDay2)<-c("Date", "Change")
 
-n_forMean<-7
+n_forMean<-5
 outputPerDay3<-na.omit(data.frame((frollmean(outputPerDay2, n=n_forMean))))
 colnames(outputPerDay3)<-c("Date","Change")
 outputPerDay3<-mutate(outputPerDay3, Date = as.Date(Date, origin = "1970-01-01"))
 
+
 P0<-ggplot(outputPerDay3, aes(Date))+
   geom_col(aes(y=Change), colour="red") +
   ylab("Change")+
-  ggtitle("Daily Change in Cases (7 Day Avg)")
+  ggtitle(paste0("Daily Change in Cases (",n_forMean," Day Avg)"))
+
+#using linear regression to determine slope of last 14 days
+slope5_data<-tail(outputPerDay2,n=5)
+slope5<-lm(slope5_data$Change ~ 0 + slope5_data$Date)
+summary(lm(slope5_data$Change ~ slope5_data$Date))
+
+lm(formula = slope5_data$Change ~ slope5_data$Date)
+
+P0a<-ggplot(slope5_data, aes(Date))+
+  geom_line(aes(y=Change)) +
+  ylab("Change")+
+  ggtitle("Daily Change in Cases (5 Days)")
+
+
+P0b<-ggplot(slope5_data,aes(Date, Change)) +
+  stat_summary(fun.data=mean_cl_normal) + 
+  geom_smooth(method='lm', formula= y~x)+
+  ggtitle("Least Squares Trend (5 Days)")
+
+
+#using linear regression to determine slope of last 14 days
+slope14_data<-tail(outputPerDay2,n=14)
+slope14<-lm(slope14_data$Change ~ 0 + slope14_data$Date)
+summary(lm(slope14_data$Change ~ slope14_data$Date))
+lm(formula = slope14_data$Change ~ slope14_data$Date)
+
+P0c<-ggplot(slope14_data, aes(Date))+
+  geom_line(aes(y=Change)) +
+  ylab("Change")+
+  ggtitle("Daily Change in Cases (14 Days)")
+
+
+P0d<-ggplot(slope14_data,aes(Date, Change)) +
+  stat_summary(fun.data=mean_cl_normal) + 
+  geom_smooth(method='lm', formula= y~x)+
+  ggtitle("Least Squares Trend (14 Days)")
+
+#using linear regression to determine slope of last 14 days
+slope30_data<-tail(outputPerDay2,n=30)
+slope30<-lm(slope30_data$Change ~ 0 + slope30_data$Date)
+summary(lm(slope30_data$Change ~ slope30_data$Date))
+lm(formula = slope30_data$Change ~ slope30_data$Date)
+
+P0e<-ggplot(slope30_data, aes(Date))+
+  geom_line(aes(y=Change)) +
+  ylab("Change")+
+  ggtitle("Daily Change in Cases (30 Days)")
+
+
+P0f<-ggplot(slope30_data,aes(Date, Change)) +
+  stat_summary(fun.data=mean_cl_normal) + 
+  geom_smooth(method='lm', formula= y~x)+
+  ggtitle("Least Squares Trend (30 Days)")
+
+
+
 
 P1<-ggplot(output, aes(x=Date, color="black"))+
   geom_line(aes(y=Confirmed), colour="green")+
@@ -101,8 +161,37 @@ for(i in 5:length(data)) {
   outputDetails[[i]]<-localDatFilteredConfirmed
 }
 str(outputDetails)
-outputDetails<-data.frame(matrix(unlist(outputDetails),ncol=9, byrow=TRUE))
+outputDetails<-data.frame(matrix(unlist(outputDetails),ncol=length(localCities), byrow=TRUE))
 colnames(outputDetails)<-localCities
+
+
+lastConfirmed<-tail(outputDetails, n=1)
+perCapita<-lastConfirmed/localPopulation
+
+overallPerCapitaValue<-tail(output$Confirmed, n=1)/sum(localPopulation)
+overallPerCapita<-data.frame(c(overallPerCapitaValue))
+colnames(overallPerCapita)<-c("Overall")
+finalPerCapita<-cbind(overallPerCapita,perCapita)
+
+perCapitaCities<-as.factor(colnames(finalPerCapita))
+perCapitaVals<-as.vector(unlist(finalPerCapita, use.names = FALSE))
+
+
+Pbp<-barplot(perCapitaVals,names.arg=perCapitaCities, col= rainbow(5), las=2, border = 0, cex.lab=1, cex.axis=1, font=1,col.axis="black",main="Per Capita Confirmed Cases")
+
+
+
+perCapitaData<-data.frame(city=perCapitaCities, value=perCapitaVals)
+
+
+Pbp<-ggplot(data=perCapitaData, aes(x=city, y=value)) +
+  geom_bar(stat="identity", fill="steelblue")+
+  geom_text(aes(label=round(value,4)), vjust=-0.3, size=3.5)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+
+
 
 
 dateRangeGraph2<-sort(as.Date(seq(startDate+4,lastDay,"day")),descending=FALSE)
@@ -138,14 +227,23 @@ P4<-ggplot(outputDetails3, aes(x=Last_Update, y=value))+
   ggtitle("City Comparison")
 
 
+print(grid.arrange(P0, grid.arrange(P0c,P0d, ncol=2),grid.arrange(P0a,P0b, ncol=2), P1,P2, P4, nrow=5))
+
+
 pdf("COVID.pdf", width=8.5, height=10.5)
-print(grid.arrange(P0,P1,P2, P4, nrow=4))
+print(grid.arrange(Pbp,P0, P1, nrow=3))
+print(grid.arrange(P2, P3, P4,  nrow=3))
 #grid.newpage()
+print(grid.arrange(P0a, P0b, P0c, P0d, P0e, P0f, ncol=2))
 
 #grid.table(outputDetailsForReport)
 dev.off()
 
 shell.exec("COVID.pdf")
+
+
+
+
 
 #--------------Text mining
 #https://data.library.virginia.edu/reading-pdf-files-into-r-for-text-mining/
@@ -161,7 +259,7 @@ shell.exec("COVID.pdf")
 #https://www.usajobs.gov/coronavirus
 #https://myteam.navair.navy.mil/corpapps/dar/rotations/pages/ViewRotation.aspx?FilterField1=Rotation_x0020_ID&FilterValue1=735
 
-
+#https://www.census.gov/data/tables/time-series/demo/popest/2010s-total-cities-and-towns.html
 
 
 p_unload(all)
